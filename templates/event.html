@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ ev.subject }} - PhishGuard AI{% endblock %}
+{% block content %}
+<a class="back" href="{{ url_for('mailbox') }}">Back to scanned emails</a>
+<div class="pagehead"><div><h1>{{ ev.subject or '(no subject)' }}</h1></div></div>
+
+<div class="panel">
+  <p style="margin-top:0"><span class="verdict {{ ev.verdict }}">{{ ev.verdict|capitalize }}</span>&nbsp;&nbsp;
+  {% if ev.quarantined %}This email was moved out of your inbox.
+  {% elif ev.alerted %}An alert was sent. The email stayed in your inbox.
+  {% elif ev.verdict=='phishing' %}Flagged only. Automatic quarantine is off, so the email was not moved.
+  {% else %}No action was needed.{% endif %}</p>
+
+  <div class="gauge big {{ ev.verdict }}" role="img" aria-label="Risk {{ ev.risk_score|pct }}">
+    <span class="fill" style="width:{{ (ev.risk_score*100)|round|int }}%"></span>
+    <i style="left:{{ (t_sus*100)|round|int }}%"></i><i style="left:{{ (t_phish*100)|round|int }}%"></i>
+  </div>
+  <div class="gauge-legend"><span>Safe</span><span>Suspicious from {{ (t_sus*100)|round|int }}%</span><span>Phishing from {{ (t_phish*100)|round|int }}%</span></div>
+
+  <dl class="facts">
+    <dt>Risk score</dt><dd>{{ ev.risk_score|pct }}</dd>
+    <dt>Link score</dt><dd>{{ ev.url_score|pct }}</dd>
+    <dt>Message text score</dt><dd>{{ ev.content_score|pct }}</dd>
+    <dt>From</dt><dd class="mono">{{ ev.sender }}</dd>
+    {% if ev.email_date %}<dt>Sent</dt><dd>{{ ev.email_date.replace('T',' ') }}</dd>{% endif %}
+    <dt>Checked</dt><dd>{{ ev.processed_at|when }} in {{ '%.0f'|format(ev.response_ms) }} ms ({{ 'demo data' if ev.mode=='demo' else 'your Gmail inbox' }})</dd>
+  </dl>
+</div>
+
+<div class="panel" style="margin-top:1rem">
+  <h2>Why this verdict</h2>
+  {% if ev.reasons %}<ul class="why">{% for r in ev.reasons %}<li>{{ r }}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">No risk signals were found.</p>{% endif %}
+</div>
+
+<h2 style="margin-top:1.5rem">Links in the email</h2>
+{% if ev.url_results %}
+<div class="tablewrap"><table>
+  <thead><tr><th>Link</th><th>Score</th><th>Checked by</th><th>Detail</th></tr></thead>
+  <tbody>{% for u in ev.url_results %}
+    <tr><td class="mono">{{ u.url }}</td><td>{{ u.score|pct }}</td><td>{{ 'VirusTotal' if u.source=='virustotal' else 'Built-in link checker' }}</td><td>{{ u.detail }}</td></tr>
+  {% endfor %}</tbody></table></div>
+{% else %}<p class="muted">This email contains no links.</p>{% endif %}
+{% endblock %}

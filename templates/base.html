@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}PhishGuard AI{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a class="brand" href="{{ url_for('overview') }}">PhishGuard AI</a>
+    <nav aria-label="Main">
+      <a href="{{ url_for('overview') }}" {% if request.endpoint=='overview' %}aria-current="page"{% endif %}>Overview</a>
+      <a href="{{ url_for('mailbox') }}" {% if request.endpoint in ('mailbox','event') %}aria-current="page"{% endif %}>Scanned emails</a>
+      <a href="{{ url_for('connect') }}" {% if request.endpoint=='connect' %}aria-current="page"{% endif %}>Connect Gmail</a>
+    </nav>
+    <div class="status">
+      {% if gmail_connected %}<b><span class="dot on"></span>Connected</b>{{ gmail_address }}
+      {% else %}<b><span class="dot"></span>Not connected</b>No Gmail account linked{% endif %}
+    </div>
+  </aside>
+  <div class="content">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}" role="status">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    <div id="scanbanner" role="status" aria-live="polite" {% if not scan_state.running %}hidden{% endif %}>
+      <span class="spin"></span><span id="scantext">Scanning your inbox...</span>
+      <form method="post" action="{{ url_for('stop_scan') }}" class="stop-scan-form"><button type="submit" class="danger">Stop scan</button></form>
+    </div>
+    {% if scan_state.error %}<div class="flash error">Last scan failed: {{ scan_state.error }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+<script>
+(function () {
+  var banner = document.getElementById('scanbanner'), text = document.getElementById('scantext'), was = false;
+  function poll() {
+    fetch('/api/status').then(function (r) { return r.json(); }).then(function (s) {
+      if (s.running) {
+        was = true; banner.hidden = false;
+        text.textContent = 'Scanning your inbox: ' + s.processed + ' emails checked' + (s.current ? ' (' + s.current + ')' : '');
+        setTimeout(poll, 1500);
+      } else if (was) { location.reload(); }
+    }).catch(function () {});
+  }
+  if (!banner.hidden) { poll(); }
+})();
+</script>
+</body>
+</html>

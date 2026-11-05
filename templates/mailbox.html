@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Scanned emails - PhishGuard AI{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div><h1>Scanned emails</h1><p>Every decision PhishGuard has made, newest first.</p></div>
+  <div class="actions">
+    {% if gmail_connected %}<form method="post" action="{{ url_for('scan') }}"><button type="submit" {% if scan_state.running %}disabled{% endif %}>Scan my inbox now</button></form>{% endif %}
+  </div>
+</div>
+
+<div class="toolbar">
+  <nav class="filters" aria-label="Filter by verdict">
+    <a href="{{ url_for('mailbox', q=q) }}" {% if not verdict %}aria-current="true"{% endif %}>All ({{ stats.total }})</a>
+    <a href="{{ url_for('mailbox', verdict='phishing', q=q) }}" {% if verdict=='phishing' %}aria-current="true"{% endif %}>Phishing ({{ stats.phishing }})</a>
+    <a href="{{ url_for('mailbox', verdict='suspicious', q=q) }}" {% if verdict=='suspicious' %}aria-current="true"{% endif %}>Suspicious ({{ stats.suspicious }})</a>
+    <a href="{{ url_for('mailbox', verdict='safe', q=q) }}" {% if verdict=='safe' %}aria-current="true"{% endif %}>Safe ({{ stats.safe }})</a>
+  </nav>
+  <form method="get" action="{{ url_for('mailbox') }}" role="search">
+    {% if verdict %}<input type="hidden" name="verdict" value="{{ verdict }}">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Search by subject or sender" aria-label="Search by subject or sender">
+  </form>
+</div>
+
+<div class="tablewrap">
+{% if events %}
+<table>
+  <thead><tr><th>Email</th><th>Verdict</th><th>Risk (lines mark {{ (t_sus*100)|round|int }}% and {{ (t_phish*100)|round|int }}%)</th><th>Action taken</th><th>Checked</th></tr></thead>
+  <tbody>
+  {% for e in events %}
+  <tr>
+    <td class="subject"><a href="{{ url_for('event', event_id=e.id) }}">{{ e.subject or '(no subject)' }}</a><small>{{ e.sender }}</small></td>
+    <td><span class="verdict {{ e.verdict }}">{{ e.verdict|capitalize }}</span></td>
+    <td><div class="gaugecell">
+      <div class="gauge {{ e.verdict }}" role="img" aria-label="Risk {{ e.risk_score|pct }}"><span class="fill" style="width:{{ (e.risk_score*100)|round|int }}%"></span>
+        <i style="left:{{ (t_sus*100)|round|int }}%"></i><i style="left:{{ (t_phish*100)|round|int }}%"></i></div>
+      <span class="gaugeval">{{ e.risk_score|pct }}</span></div></td>
+    <td>{% if e.quarantined and e.alerted %}Quarantined, alert sent{% elif e.quarantined %}Quarantined{% elif e.alerted %}Alert sent{% elif e.verdict=='phishing' %}Flagged only{% else %}None{% endif %}</td>
+    <td>{{ e.processed_at|when }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty"><h2>No matching emails</h2><p>{% if q or verdict %}Try clearing the search or filter.{% else %}Nothing has been scanned yet. Connect Gmail and run a scan, or try the demo from the Overview page.{% endif %}</p></div>
+{% endif %}
+</div>
+
+<footer class="note">
+  {% if model %}Content model: {{ model.name }} ({{ model.dataset }} dataset), precision {{ '%.2f'|format(model.precision) }}, recall {{ '%.2f'|format(model.recall) }}, false-positive rate {{ '%.2f'|format(model.false_positive_rate) }} on held-out data.
+  {% else %}Content model not trained yet: run <span class="mono">python train_model.py</span>. A keyword heuristic is used until then.{% endif %}
+</footer>
+{% endblock %}

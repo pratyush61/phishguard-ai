@@ -1,0 +1,32 @@
+{
+  "selected": "NaiveBayes",
+  "dataset": "synthetic",
+  "n_train": 800,
+  "n_test": 200,
+  "results": {
+    "NaiveBayes": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "confusion": {
+        "tn": 100,
+        "fp": 0,
+        "fn": 0,
+        "tp": 100
+      }
+    },
+    "RandomForest": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "false_positive_rate": 0.0,
+      "confusion": {
+        "tn": 100,
+        "fp": 0,
+        "fn": 0,
+        "tp": 100
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Connect Gmail - PhishGuard AI{% endblock %}
+{% block content %}
+<div class="pagehead"><div><h1>Connect Gmail</h1>
+  <p>Link your inbox once. PhishGuard then scans it from this page, with no files to edit.</p></div></div>
+
+<div class="twocol">
+<section class="panel">
+  <form method="post" action="{{ url_for('connect') }}" autocomplete="off">
+    <div class="row2">
+      <div class="field"><label for="email">Gmail address</label>
+        <input id="email" name="email" type="email" value="{{ s.email }}" placeholder="you@gmail.com" required></div>
+      <div class="field"><label for="pw">App Password</label>
+        <input id="pw" name="app_password" type="password" placeholder="{{ 'Saved. Leave blank to keep it' if s.has_password else '16-character password' }}" {% if not s.has_password %}required{% endif %}>
+        <p class="hint">Not your normal Gmail password. See the steps on the right.</p></div>
+    </div>
+
+    <hr class="sep">
+    <h2>What PhishGuard should do</h2>
+    <div class="row2">
+      <div class="field"><label for="scope">Which emails to scan</label>
+        <select id="scope" name="scope">
+          <option value="recent" {% if s.scope=='recent' %}selected{% endif %}>Recent emails</option>
+          <option value="unread" {% if s.scope=='unread' %}selected{% endif %}>Unread only</option></select></div>
+      <div class="field"><label for="rc">How many per scan</label>
+        <select id="rc" name="recent_count">{% for n in (10,25,50,100) %}<option value="{{ n }}" {% if s.recent_count==n %}selected{% endif %}>{{ n }} emails</option>{% endfor %}</select></div>
+    </div>
+
+    <div class="check"><input id="aq" type="checkbox" name="auto_quarantine" {% if s.auto_quarantine %}checked{% endif %}>
+      <div><label for="aq">Move phishing emails out of my inbox automatically</label>
+      <p class="hint">Moves them to a "PhishGuard-Quarantine" label. Gmail keeps a copy in All Mail, so nothing is deleted. Leave this off while you are testing.</p></div></div>
+
+    <div class="check"><input id="sa" type="checkbox" name="send_alerts" {% if s.send_alerts %}checked{% endif %}>
+      <div><label for="sa">Email me an alert when something is flagged</label></div></div>
+    <div class="field"><label for="ar">Send alerts to</label>
+      <input id="ar" name="alert_recipient" type="email" value="{{ s.alert_recipient }}" placeholder="Leave blank to use your own Gmail address"></div>
+
+    <div class="check"><input id="as" type="checkbox" name="auto_scan" {% if s.auto_scan %}checked{% endif %}>
+      <div><label for="as">Scan automatically while this app is running</label></div></div>
+    <div class="field"><label for="iv">Check every</label>
+      <select id="iv" name="interval_minutes">{% for n in (1,2,5,10,30,60) %}<option value="{{ n }}" {% if s.interval_minutes==n %}selected{% endif %}>{{ n }} minute{{ 's' if n>1 }}</option>{% endfor %}</select></div>
+
+    <hr class="sep">
+    <div class="field"><label for="vt">VirusTotal API key (optional)</label>
+      <input id="vt" name="vt_key" type="password" placeholder="{{ 'Saved. Leave blank to keep it' if s.has_vt else 'Paste your free key' }}">
+      <p class="hint">With a key, links are checked against 70+ security engines (free plan: 4 lookups a minute, so scans are slower). Without one, a built-in rule-based link checker is used.</p></div>
+
+    <button type="submit">{{ 'Save settings' if s.has_password else 'Connect and save' }}</button>
+  </form>
+
+  {% if s.has_password %}
+  <hr class="sep">
+  <h2>Data on this computer</h2>
+  <form class="inline" method="post" action="{{ url_for('disconnect') }}"><button class="danger" type="submit">Disconnect Gmail and delete saved password</button></form>
+  <form class="inline" method="post" action="{{ url_for('clear_history') }}"><button class="ghost" type="submit">Clear scan history</button></form>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Get a Gmail App Password</h2>
+  <ol class="steps">
+    <li>Open <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">Google Account security</a> and turn on <b>2-Step Verification</b>.</li>
+    <li>Open <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App passwords</a>, name it "PhishGuard", and press Create.</li>
+    <li>Copy the 16-character password into the form.</li>
+    <li>In Gmail, open Settings, then <b>See all settings</b>, then <b>Forwarding and POP/IMAP</b>, and choose <b>Enable IMAP</b>.</li>
+  </ol>
+  <p class="hint">PhishGuard reads mail without marking it as read. Your App Password is stored only in <span class="mono">var/settings.json</span> on this computer and is sent only to Google. You can revoke it any time from your Google account.</p>
+  <p class="hint">School or work Google accounts may block App Passwords. If so, use a personal Gmail address.</p>
+</section>
+</div>
+{% endblock %}

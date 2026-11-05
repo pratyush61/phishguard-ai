@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Overview - PhishGuard AI{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1>Overview</h1>
+    <p>{% if gmail_connected %}Watching {{ gmail_address }}.{% if stats.last_processed %} Last email checked {{ stats.last_processed|when }}.{% endif %}
+       {% else %}Connect a Gmail account to start checking your real inbox.{% endif %}</p>
+  </div>
+  <div class="actions">
+    {% if gmail_connected %}
+      <form method="post" action="{{ url_for('scan') }}"><button type="submit" {% if scan_state.running %}disabled{% endif %}>Scan my inbox now</button></form>
+    {% else %}
+      <a class="btn" href="{{ url_for('connect') }}">Connect Gmail</a>
+    {% endif %}
+    <form method="post" action="{{ url_for('run_demo') }}"><button class="ghost" type="submit">Run demo scan</button></form>
+  </div>
+</div>
+
+{% if stats.total == 0 %}
+<div class="panel empty">
+  <h2>No emails scanned yet</h2>
+  <p>Link your Gmail account with an App Password, then press "Scan my inbox now". PhishGuard reads each message, checks its links, scores the wording, and shows you why.</p>
+  <a class="btn" href="{{ url_for('connect') }}">Connect Gmail</a>
+</div>
+{% else %}
+<div class="figures">
+  <div><b>{{ stats.total }}</b><span>emails scanned</span></div>
+  <div class="danger"><b>{{ stats.phishing }}</b><span>phishing</span></div>
+  <div class="warn"><b>{{ stats.suspicious }}</b><span>suspicious</span></div>
+  <div class="ok"><b>{{ stats.safe }}</b><span>safe</span></div>
+  <div><b>{{ stats.quarantined }}</b><span>quarantined</span></div>
+  <div><b>{{ '%.0f'|format(stats.avg_ms) }} ms</b><span>average response time</span></div>
+</div>
+
+<div class="grid2">
+  <section class="panel" aria-labelledby="h-activity">
+    <h2 id="h-activity">Emails scanned in the last 14 days</h2>
+    <svg class="chart" viewBox="0 0 {{ chart.w }} {{ chart.h }}" role="img" aria-label="Stacked bar chart of emails scanned per day, split by verdict">
+      <line x1="0" x2="{{ chart.w }}" y1="{{ chart.base }}" y2="{{ chart.base }}"/>
+      {% for b in chart.bars %}
+        <g><title>{{ b.label }}: {{ b.phishing }} phishing, {{ b.suspicious }} suspicious, {{ b.safe }} safe</title>
+        {% if b.h_safe %}<rect class="b-safe" x="{{ b.x }}" y="{{ b.y_safe }}" width="{{ b.w }}" height="{{ b.h_safe }}" rx="2"/>{% endif %}
+        {% if b.h_sus %}<rect class="b-sus" x="{{ b.x }}" y="{{ b.y_sus }}" width="{{ b.w }}" height="{{ b.h_sus }}" rx="2"/>{% endif %}
+        {% if b.h_phi %}<rect class="b-phi" x="{{ b.x }}" y="{{ b.y_phi }}" width="{{ b.w }}" height="{{ b.h_phi }}" rx="2"/>{% endif %}
+        {% if b.show_label %}<text x="{{ b.x + b.w/2 }}" y="{{ chart.base + 16 }}" text-anchor="middle">{{ b.label }}</text>{% endif %}</g>
+      {% endfor %}
+    </svg>
+    <div class="legend"><span><i style="background:var(--danger)"></i>Phishing</span><span><i style="background:var(--warn)"></i>Suspicious</span><span><i style="background:var(--ok)"></i>Safe</span><span>Tallest bar: {{ chart.top }} emails</span></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-split">
+    <h2 id="h-split">Verdict split</h2>
+    <div class="splitbar" role="img" aria-label="{{ split.phishing }}% phishing, {{ split.suspicious }}% suspicious, {{ split.safe }}% safe">
+      <span style="width:{{ split.phishing }}%"></span><span style="width:{{ split.suspicious }}%"></span><span style="width:{{ split.safe }}%"></span>
+    </div>
+    <dl class="split">
+      <dt><span class="verdict phishing">Phishing</span></dt><dd>{{ split.phishing }}%</dd>
+      <dt><span class="verdict suspicious">Suspicious</span></dt><dd>{{ split.suspicious }}%</dd>
+      <dt><span class="verdict safe">Safe</span></dt><dd>{{ split.safe }}%</dd>
+    </dl>
+    <p class="hint" style="margin-top:1rem">Alerts sent: {{ stats.alerted }}. Emails moved to quarantine: {{ stats.quarantined }}.</p>
+  </section>
+</div>
+
+<section class="panel" aria-labelledby="h-attn">
+  <h2 id="h-attn">Needs your attention</h2>
+  {% if flagged %}
+  <ul class="attention">
+    {% for e in flagged %}
+    <li>
+      <div><a href="{{ url_for('event', event_id=e.id) }}">{{ e.subject or '(no subject)' }}</a><small>{{ e.sender }}</small></div>
+      <div class="gaugecell">
+        <div class="gauge {{ e.verdict }}" role="img" aria-label="Risk {{ e.risk_score|pct }}"><span class="fill" style="width:{{ (e.risk_score*100)|round|int }}%"></span>
+          <i style="left:{{ (t_sus*100)|round|int }}%"></i><i style="left:{{ (t_phish*100)|round|int }}%"></i></div>
+        <span class="gaugeval">{{ e.risk_score|pct }}</span>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<p class="muted">Nothing suspicious so far. Every scanned email looks safe.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,6 @@
+services:
+  phishguard:
+    build: .
+    ports: ["5000:5000"]
+    volumes: ["./var:/app/var"]   # saved Gmail settings and scan history live here
+    restart: unless-stopped
